@@ -17,6 +17,7 @@ int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_asc
 int star_new_north_coordinates_dec2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
 //performs spherical transformations for both right ascension and declination axis
 int star_future_position(double cvec[4], double vec[4], double right_ascension_axis, double declination_axis);
+int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year);
 //prints help
 void print_help();
 
@@ -125,63 +126,9 @@ int main (int argc, char** argv)
 		printf("\t\t%lf days\n", tropic_year);
 		printf("\tObliquity Value:\n");
 		printf("\t\t%Lf°\n", declination_axis * 180.0L / M_PI);
-
-		double months[] = {31.0L,28.0L,31.0L,30.0L,31.0L,30.0L,31.0L,31.0L,30.0L,31.0L,30.0L,31.0L};
-		double tropic_days = day;
-		for(int i = 0; i < month - 1; i++)
-			tropic_days += months[i];
 		
-		if(calendar == 0)
-		{
-			tropic_days -= 13.0L;
-			for(int i = 2099; i < (int)(year); i++)
-			{
-				if(i % 100 == 0)
-				{
-					tropic_days -= 1.0L;
-					if(i % 400 == 0)
-					{
-						tropic_days += 1.0L;
-						
-					}
-				}
-			}
-		}
-		if(calendar == 0 || calendar == 1)
-		{
-			for(int i = 3999; i < (int)(year); i++)
-			{
-				if(i % 4000 == 0)
-				{
-					tropic_days -= 1.0L;
-					if(i % 20000 == 0)
-					{
-						tropic_days -= 1.0L;
-					}
-				}
-			}
-		}
-		if(tropic_days < 0.0L)
-		{
-			year -= 1;
-			tropic_days=365.0L - tropic_days;
-		}else if(tropic_days > 365.0L)
-		{
-			year += 1;
-			tropic_days=(double)((int)(tropic_days) % 365);
-		}
-		double perihelion_mvt = (year - 2017.0L) * perihelion_mvt_year;
-		double precession_mvt = precession_mvt_year * (year - 2017.0L);
-		double mean_movement = 2.0L * M_PI / sideral_year;
-		double e = 0.016708634L - 0.000042037L * (double)(T) - 0.0000001267L * (double)(pow(T,2));
-		double longitude_perihelion =  (279.69668L + 36000.76892L * (double)(T) + 0.0003025L * (double)(pow(T,2))) * M_PI / 180.0L;
-		double perihelion_day = mean_movement * (tropic_days - 4.0L);
-		double mm = mean_movement * tropic_days;
-		// Equation of Time with experimental method
-		double EoT = (2.0L * e * sinl(perihelion_day - precession_mvt - perihelion_mvt) -
-			pow(tanl(declination_axis / 2.0L), 2) * sinl((longitude_perihelion + mm + 
-				2.0L * e * sinl(2.0L * longitude_perihelion + 3.0L * mm) - 
-					2.0L * e * sinl(2.0L * longitude_perihelion + mm)) * 2.0L)) * 180.0L / M_PI;
+		double EoT;
+		equation_of_time(&EoT, day, month, year, &precession_mvt_year, &perihelion_mvt_year, declination_axis, T, calendar, sideral_year);
 		printf("\tEquation Of Time\n");
 		int min = EoT * 4.0L;
 		int sec = (int)(EoT * 4.0L * 60.0L) % 60;
@@ -259,6 +206,69 @@ void print_help()
 	printf("We can see that Véga is our polar star by the year 14000 ( with the proper motion )\n");
 	printf("\t./stars_shift -c1 -e \"1 1 13510\" -y 18.783058333 -z 39.021525\n");
 	printf("\n###########################################################################################\n");
+}
+
+int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year)
+{
+
+	double months[] = {31.0L,28.0L,31.0L,30.0L,31.0L,30.0L,31.0L,31.0L,30.0L,31.0L,30.0L,31.0L};
+	double tropic_days = day;
+	for(int i = 0; i < month - 1; i++)
+		tropic_days += months[i];
+	
+	if(calendar == 0)
+	{
+		tropic_days -= 13.0L;
+		for(int i = 2099; i < (int)(year); i++)
+		{
+			if(i % 100 == 0)
+			{
+				tropic_days -= 1.0L;
+				if(i % 400 == 0)
+				{
+					tropic_days += 1.0L;
+					
+				}
+			}
+		}
+	}
+	if(calendar == 0 || calendar == 1)
+	{
+		for(int i = 3999; i < (int)(year); i++)
+		{
+			if(i % 4000 == 0)
+			{
+				tropic_days -= 1.0L;
+				if(i % 20000 == 0)
+				{
+					tropic_days -= 1.0L;
+				}
+			}
+		}
+	}
+	if(tropic_days < 0.0L)
+	{
+		year -= 1;
+		tropic_days=365.0L - tropic_days;
+	}else if(tropic_days > 365.0L)
+	{
+		year += 1;
+		tropic_days=(double)((int)(tropic_days) % 365);
+	}
+	double perihelion_mvt = (year - 2017.0L) * (*perihelion_mvt_year);
+	double precession_mvt = (*precession_mvt_year) * (year - 2017.0L);
+	double mean_movement = 2.0L * M_PI / sideral_year;
+	double e = 0.016708634L - 0.000042037L * (double)(T) - 0.0000001267L * (double)(pow(T,2));
+	double longitude_perihelion =  (279.69668L + 36000.76892L * (double)(T) + 0.0003025L * (double)(pow(T,2))) * M_PI / 180.0L;
+	double perihelion_day = mean_movement * (tropic_days - 4.0L);
+	double mm = mean_movement * tropic_days;
+	// Equation of Time with experimental method
+	*EoT = (2.0L * e * sinl(perihelion_day - precession_mvt - perihelion_mvt) -
+		pow(tanl(declination_axis / 2.0L), 2) * sinl((longitude_perihelion + mm + 
+			2.0L * e * sinl(2.0L * longitude_perihelion + 3.0L * mm) - 
+				2.0L * e * sinl(2.0L * longitude_perihelion + mm)) * 2.0L)) * 180.0L / M_PI;
+	return EXIT_SUCCESS;
+
 }
 
 int star_future_position(double cvec[4], double vec[4], double right_ascension_axis, double declination_axis)
@@ -355,4 +365,3 @@ int star_cartesian2polar(double *right_ascension, double *declination, double ve
 
 	return EXIT_SUCCESS;
 }
-
