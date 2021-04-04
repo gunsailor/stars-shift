@@ -17,7 +17,7 @@ int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_asc
 int star_new_north_coordinates_dec2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
 //performs spherical transformations for both right ascension and declination axis
 int star_future_position(double cvec[4], double vec[4], double right_ascension_axis, double declination_axis);
-int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year);
+int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year, int wikipedia);
 //prints help
 void print_help();
 
@@ -31,9 +31,10 @@ int main (int argc, char** argv)
 	double perihelion_mvt_year = 2.0L * M_PI / cycle_perihelion, highest_obliquity = 24.5044L, lowest_obliquity = 22.0425L;
 	double precession_mvt_year = 2.0L * M_PI / cycle_precession;
 	double day = -1.0L, month = -1.0L, year = -1.0L;
-	char *list_options = "hz:y:e:c:";
-	int option, date = 0, calendar = 0;
+	char *list_options = "hz:y:e:c:a:d:w";
+	int option, date = 0, calendar = 0, wikipedia = 0;
 	double right_ascension = 0.0L, right_ascension_axis = 0.0L, declination = 0.0L, declination_axis = 0.0L;
+	double declination_delta = 0.0L, right_ascension_delta = 0.0L;
 	opterr = 0;
 	while((option = getopt(argc, argv, list_options)) != -1)
 	{
@@ -43,11 +44,20 @@ int main (int argc, char** argv)
 				print_help();
 				return EXIT_SUCCESS;
 			break;
+			case 'a':
+				sscanf(optarg, "%lf", &right_ascension_delta);
+			break;
+			case 'd':
+				sscanf(optarg, "%lf", &declination_delta);
+			break;
 			case 'y':
 				sscanf(optarg, "%lf", &right_ascension);
 			break;
 			case 'z':
 				sscanf(optarg, "%lf", &declination);
+			break;
+			case 'w':
+				wikipedia = 1;
 			break;
 			case 'e':
 				if(sscanf(optarg, "%lf %lf %lf", &day, &month, &year) != EOF)
@@ -128,7 +138,7 @@ int main (int argc, char** argv)
 		printf("\t\t%Lf°\n", declination_axis * 180.0L / M_PI);
 		
 		double EoT;
-		equation_of_time(&EoT, day, month, year, &precession_mvt_year, &perihelion_mvt_year, declination_axis, T, calendar, sideral_year);
+		equation_of_time(&EoT, day, month, year, &precession_mvt_year, &perihelion_mvt_year, declination_axis, T, calendar, sideral_year, wikipedia);
 		printf("\tEquation Of Time\n");
 		int min = EoT * 4.0L;
 		int sec = (int)(EoT * 4.0L * 60.0L) % 60;
@@ -140,8 +150,8 @@ int main (int argc, char** argv)
 			return EXIT_SUCCESS;
 	}
 
-	right_ascension = 2.0L * M_PI - right_ascension * M_PI / 12.0L;
-	declination = declination * M_PI / 180.0L;
+	right_ascension = 2.0L * M_PI - (right_ascension + right_ascension_delta / 1000.0L / 3600.0L * (year - 2017))* M_PI / 12.0L;
+	declination = (declination + declination_delta / 1000.0L / 3600.0L * (year - 2017)) * M_PI / 180.0L;
 	
 	star_polar2cartesian(starvec, right_ascension, declination, 1.0L);
 	
@@ -196,6 +206,11 @@ void print_help()
 	printf("must be in fraction of hours.\n\n");
 	printf("-z : the declination of the star you want the coordinates for the Age considered.\n");
 	printf("must be in fraction of degrees.\n\n");
+	printf("-a : the right ascension proper motion / year of the star you want the coordinates for the Age considered.\n");
+	printf("must be in mas/y.\n\n");
+	printf("-d : the declination proper motion / year of the star you want the coordinates for the Age considered.\n");
+	printf("must be in mas/y.\n\n");
+	printf("-w : to get the equation of time according to wikipedia.\n\n");
 	printf("-e : a string with the day, the month and the year( separated by space ) from which you want the correction\n");
 	printf("in minutes and seconds in the equation of time, or the date ( with the same format )\n");
 	printf("for the new baseline from which you want your star to be represented\n");
@@ -204,11 +219,22 @@ void print_help()
 	printf("\t./stars_shift -c1 -e \"1 1 5000\" -y RIGHT_ASCENSON -z DECLINATION\n");
 	printf("As long as -e option is mentioned, the equation of time is calculated\n");
 	printf("We can see that Véga is our polar star by the year 14000 ( with the proper motion )\n");
-	printf("\t./stars_shift -c1 -e \"1 1 13510\" -y 18.783058333 -z 39.021525\n");
+	printf("\t./stars_shift -c1 -e \"1 1 12755\" -y 18.6156083333 -z 38.7829999999 -a 200.94 -d 286.23\n");
+	printf("For the day 1/1/12755\n");
+	printf("		Tropic Year Value:\n");
+	printf("				365.241863 days\n");
+	printf("		Obliquity Value:\n");
+	printf("				22.044642°\n");
+	printf("		Equation Of Time\n");
+	printf("			Is by experimental method:\n");
+	printf("					-1 min 34 sec\n");
+	printf("Results for the star:\n");
+	printf("		- Right Ascension: 5h59'53''\n");
+	printf("		- Declination: 83.24°\n");
 	printf("\n###########################################################################################\n");
 }
 
-int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year)
+int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year, int wikipedia)
 {
 
 	double months[] = {31.0L,28.0L,31.0L,30.0L,31.0L,30.0L,31.0L,31.0L,30.0L,31.0L,30.0L,31.0L};
@@ -259,7 +285,11 @@ int equation_of_time(double *EoT, int day, int month, int year, double *precessi
 	double precession_mvt = (*precession_mvt_year) * (year - 2017.0L);
 	double mean_movement = 2.0L * M_PI / sideral_year;
 	double e = 0.016708634L - 0.000042037L * (double)(T) - 0.0000001267L * (double)(pow(T,2));
-	double longitude_perihelion =  (279.69668L + 36000.76892L * (double)(T) + 0.0003025L * (double)(pow(T,2))) * M_PI / 180.0L;
+	double longitude_perihelion;
+	if(wikipedia)
+		longitude_perihelion = 283.0L * M_PI / 180.0L;
+	else
+		longitude_perihelion =  (279.69668L + 36000.76892L * (double)(T) + 0.0003025L * (double)(pow(T,2))) * M_PI / 180.0L;
 	double perihelion_day = mean_movement * (tropic_days - 4.0L);
 	double mm = mean_movement * tropic_days;
 	// Equation of Time with experimental method
