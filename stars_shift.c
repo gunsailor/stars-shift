@@ -17,7 +17,7 @@ int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_asc
 int star_new_north_coordinates_dec2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
 //performs spherical transformations for both right ascension and declination axis
 int star_future_position(double cvec[4], double vec[4], double right_ascension_axis, double declination_axis);
-int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year, int wikipedia);
+int equation_of_time(double *EoT, int day, int month, int year, double *precession_motion_year, double *perihelion_motion_year, double declination_axis, int T, int calendar, double sideral_year, int wikipedia);
 //prints help
 void print_help();
 
@@ -28,8 +28,8 @@ int main (int argc, char** argv)
 	double tropic_year = 365.2421898L, sideral_year = 365.256363004L, anomalistic_year = 365.259635864L;
 	double cycle_precession = tropic_year / (sideral_year - tropic_year);
 	double cycle_perihelion = tropic_year / (anomalistic_year - sideral_year);
-	double perihelion_mvt_year = 2.0L * M_PI / cycle_perihelion, highest_obliquity = 24.5044L, lowest_obliquity = 22.0425L;
-	double precession_mvt_year = 2.0L * M_PI / cycle_precession;
+	double perihelion_motion_year = 2.0L * M_PI / cycle_perihelion, highest_obliquity = 24.5044L, lowest_obliquity = 22.0425L;
+	double precession_motion_year = 2.0L * M_PI / cycle_precession;
 	double day = -1.0L, month = -1.0L, year = -1.0L;
 	char *list_options = "hz:y:e:c:a:d:w";
 	int option, date = 0, calendar = 0, wikipedia = 0;
@@ -113,7 +113,7 @@ int main (int argc, char** argv)
 		}
 		
 		// Gaperihelion_daya radius calculus
-		right_ascension_axis = precession_mvt_year * (year - 2017.0L);
+		right_ascension_axis = precession_motion_year * (year - 2017.0L);
 		// obliquity for the year over 41000 years... between 21.1° & 24.5°.
 		double obliquity_radius = - 2.0L * M_PI / 41000.0L * (year - 2890.02L);
 		declination_axis = ((highest_obliquity + lowest_obliquity) / 2.0L + (highest_obliquity - lowest_obliquity) / 2.0L  * (double)(sinl((double)(obliquity_radius)))) * M_PI / 180.0L;
@@ -138,7 +138,7 @@ int main (int argc, char** argv)
 		printf("\t\t%Lf°\n", declination_axis * 180.0L / M_PI);
 		
 		double EoT;
-		equation_of_time(&EoT, day, month, year, &precession_mvt_year, &perihelion_mvt_year, declination_axis, T, calendar, sideral_year, wikipedia);
+		equation_of_time(&EoT, day, month, year, &precession_motion_year, &perihelion_motion_year, declination_axis, T, calendar, sideral_year, wikipedia);
 		printf("\tEquation Of Time\n");
 		int min = EoT * 4.0L;
 		int sec = (int)(EoT * 4.0L * 60.0L) % 60;
@@ -150,8 +150,8 @@ int main (int argc, char** argv)
 			return EXIT_SUCCESS;
 	}
 
-	right_ascension = 2.0L * M_PI - (right_ascension + right_ascension_delta / 1000.0L / 3600.0L * (year - 2017))* M_PI / 12.0L;
-	declination = (declination + declination_delta / 1000.0L / 3600.0L * (year - 2017)) * M_PI / 180.0L;
+	right_ascension = 2.0L * M_PI - (right_ascension + right_ascension_delta / 1000.0L / 3600.0L * (year - 2017.0L))* M_PI / 12.0L;
+	declination = (declination + declination_delta / 1000.0L / 3600.0L * (year - 2017.0L)) * M_PI / 180.0L;
 	
 	star_polar2cartesian(starvec, right_ascension, declination, 1.0L);
 	
@@ -191,7 +191,7 @@ void print_help()
 	printf("The position of stars over time is the result of two cycles:\n");
 	printf("\t1) the precession of equinoxes ( ~ 25770 years period ).\n");
 	printf("\t2) the variations of obliquity ( ~ 41000 years period ).\n");
-	printf("The third cycle is the movement of perihelion due to ellipticity ( ~ 112000 years cycle ).\n");
+	printf("The third cycle is the motion of perihelion due to ellipticity ( ~ 112000 years cycle ).\n");
 	printf("The obliquity, the precession & the excentricity permit to calculate the equation of time.\n");
 	printf("Those cycles produce the pole shift and changes in the equation of time.\n");
 	printf("BE CAREFULL: The equation of time is accurate only for the 3000 next years!!\n");
@@ -234,7 +234,7 @@ void print_help()
 	printf("\n###########################################################################################\n");
 }
 
-int equation_of_time(double *EoT, int day, int month, int year, double *precession_mvt_year, double *perihelion_mvt_year, double declination_axis, int T, int calendar, double sideral_year, int wikipedia)
+int equation_of_time(double *EoT, int day, int month, int year, double *precession_motion_year, double *perihelion_motion_year, double declination_axis, int T, int calendar, double sideral_year, int wikipedia)
 {
 
 	double months[] = {31.0L,28.0L,31.0L,30.0L,31.0L,30.0L,31.0L,31.0L,30.0L,31.0L,30.0L,31.0L};
@@ -281,19 +281,19 @@ int equation_of_time(double *EoT, int day, int month, int year, double *precessi
 		year += 1;
 		tropic_days=(double)((int)(tropic_days) % 365);
 	}
-	double perihelion_mvt = (year - 2017.0L) * (*perihelion_mvt_year);
-	double precession_mvt = (*precession_mvt_year) * (year - 2017.0L);
-	double mean_movement = 2.0L * M_PI / sideral_year;
+	double perihelion_motion = (year - 2017.0L) * (*perihelion_motion_year);
+	double precession_motion = (*precession_motion_year) * (year - 2017.0L);
+	double mean_motion = 2.0L * M_PI / sideral_year;
 	double e = 0.016708634L - 0.000042037L * (double)(T) - 0.0000001267L * (double)(pow(T,2));
 	double longitude_perihelion;
 	if(wikipedia)
 		longitude_perihelion = 283.0L * M_PI / 180.0L;
 	else
 		longitude_perihelion =  (279.69668L + 36000.76892L * (double)(T) + 0.0003025L * (double)(pow(T,2))) * M_PI / 180.0L;
-	double perihelion_day = mean_movement * (tropic_days - 4.0L);
-	double mm = mean_movement * tropic_days;
+	double perihelion_day = mean_motion * (tropic_days - 4.0L);
+	double mm = mean_motion * tropic_days;
 	// Equation of Time with experimental method
-	*EoT = (2.0L * e * sinl(perihelion_day - precession_mvt - perihelion_mvt) -
+	*EoT = (2.0L * e * sinl(perihelion_day - precession_motion - perihelion_motion) -
 		pow(tanl(declination_axis / 2.0L), 2) * sinl((longitude_perihelion + mm + 
 			2.0L * e * sinl(2.0L * longitude_perihelion + 3.0L * mm) - 
 				2.0L * e * sinl(2.0L * longitude_perihelion + mm)) * 2.0L)) * 180.0L / M_PI;
