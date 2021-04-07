@@ -17,7 +17,6 @@ int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_asc
 int star_new_north_coordinates_dec2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
 //performs spherical transformations for both right ascension and declination axis
 int star_future_position(double cvec[4], double vec[4], double right_ascension_axis, double declination_axis);
-int equation_of_time(double *EoT, int day, int month, int year, double *precession_motion_year, double *perihelion_motion_year, double declination_axis, int T, int calendar, double sideral_year, int wikipedia);
 //prints help
 void print_help();
 
@@ -118,7 +117,7 @@ int main (int argc, char** argv)
 	printf("\tObliquity Value:\n");
 	printf("\t\t%Lf°\n", declination_axis * 180.0L / M_PI);
 
-	right_ascension = 2.0L * M_PI - (right_ascension + right_ascension_delta / 1000.0L / 3600.0L * (year - 2017.0L))* M_PI / 12.0L;
+	right_ascension = - (right_ascension + right_ascension_delta / 1000.0L / 3600.0L * (year - 2017.0L))* M_PI / 12.0L;
 	declination = (declination + declination_delta / 1000.0L / 3600.0L * (year - 2017.0L)) * M_PI / 180.0L;
 	
 	star_polar2cartesian(starvec, right_ascension, declination, 1.0L);
