@@ -15,8 +15,6 @@ int star_cartesian2polar(double *right_ascension, double *declination, double ve
 int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
 //used in \"millenium\" mode to fill the vector according to the declination axis
 int star_new_north_coordinates_dec2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
-//performs spherical transformations for both right ascension and declination axis
-int star_future_position(double cvec[4], double vec[4], double right_ascension_axis, double declination_axis);
 //prints help
 void print_help();
 
@@ -128,7 +126,23 @@ int main (int argc, char** argv)
 	//	- 2.808875L*M_PI/24.0L)+sinl(-16.7131388888L*M_PI/180.0L)*sinl(-25.546927778L*M_PI/180.0L)) * 180.0L / M_PI));
 	/////////////////////////////////////////////////////////////////
 
-	star_future_position(starcvec, starvec, right_ascension_axis, declination_axis);
+	// computes rotate vector from right ascension axis to represent stars according to the ecliptic
+	star_new_north_coordinates_ra2rotate_vector(starcvec, 0.0L, (23.0L + 26.0L / 60.0L + (12.087L + 0.4863L * 3.0L)/ 3600.0L) * M_PI / 180.0L);
+
+	// performs transformations
+	star_rotate(starvec, starcvec);
+
+	// computes rotate vector from declination axis
+	star_new_north_coordinates_dec2rotate_vector(starcvec, right_ascension_axis, M_PI / 2.0L);
+	
+	// performs transformations
+	star_rotate(starvec, starcvec);
+	
+	// computes rotate vector from right ascension axis
+	star_new_north_coordinates_ra2rotate_vector(starcvec, M_PI, declination_axis);
+
+	// perform transformations
+	star_rotate(starvec, starcvec);
 
 	// translate the star's coordinate from cartesian to polar equatorial baseline
 	star_cartesian2polar(&right_ascension, &declination, starvec, 1);
@@ -190,29 +204,6 @@ void print_help()
 	printf("		- Right Ascension: 5h59'53''\n");
 	printf("		- Declination: 83.24°\n");
 	printf("\n###########################################################################################\n");
-}
-
-int star_future_position(double cvec[4], double vec[4], double right_ascension_axis, double declination_axis)
-{
-	// computes rotate vector from right ascension axis to represent stars according to the ecliptic
-	star_new_north_coordinates_ra2rotate_vector(cvec, 0.0L, (23.0L + 26.0L / 60.0L + (12.087L + 0.4863L * 3.0L)/ 3600.0L) * M_PI / 180.0L);
-
-	// performs transformations
-	star_rotate(vec, cvec);
-
-	// computes rotate vector from declination axis
-	star_new_north_coordinates_dec2rotate_vector(cvec, right_ascension_axis, M_PI / 2.0L);
-	
-	// performs transformations
-	star_rotate(vec, cvec);
-	
-	// computes rotate vector from right ascension axis
-	star_new_north_coordinates_ra2rotate_vector(cvec, M_PI, declination_axis);
-
-	// perform transformations
-	star_rotate(vec, cvec);
-	
-	return EXIT_SUCCESS;
 }
 
 int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis)
