@@ -12,9 +12,7 @@ int star_polar2cartesian(double vec[4], double right_ascension, double declinati
 //tansforms cartesian coordinates to equatorial coodinates
 int star_cartesian2polar(double *right_ascension, double *declination, double vec[4], int equatorial);
 //used in \"millenium\" mode to fill the vector according to the right ascension axis
-int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
-//used in \"millenium\" mode to fill the vector according to the declination axis
-int star_new_north_coordinates_dec2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis);
+int star_new_north_coordinates_rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis, int a);
 //prints help
 void print_help();
 
@@ -91,9 +89,9 @@ int main (int argc, char** argv)
 	}
 
 	// right ascension axis calculus
-	right_ascension_axis = precession_motion_year * (year - 2017.0L);
+	right_ascension_axis = precession_motion_year * (year - 2000.0L);
 	// obliquity for the year over 41000 years... between 21.1° & 24.5°.
-	double obliquity_radius = - 2.0L * M_PI / 41000.0L * (year - 2890.02L);
+	double obliquity_radius = - 2.0L * M_PI / 41000.0L * (year - 2885.0L);
 	declination_axis = ((highest_obliquity + lowest_obliquity) / 2.0L + (highest_obliquity - lowest_obliquity) / 2.0L  * (double)(sinl((double)(obliquity_radius)))) * M_PI / 180.0L;
 
 	// Tropic year calculus
@@ -115,8 +113,8 @@ int main (int argc, char** argv)
 	printf("\tObliquity Value:\n");
 	printf("\t\t%Lf°\n", declination_axis * 180.0L / M_PI);
 
-	right_ascension = - (right_ascension + right_ascension_delta / 1000.0L / 3600.0L * (year - 2017.0L))* M_PI / 12.0L;
-	declination = (declination + declination_delta / 1000.0L / 3600.0L * (year - 2017.0L)) * M_PI / 180.0L;
+	right_ascension = - (right_ascension + right_ascension_delta / 1000.0L / 3600.0L * (year - 2000.0L))* M_PI / 12.0L;
+	declination = (declination + declination_delta / 1000.0L / 3600.0L * (year - 2000.0L)) * M_PI / 180.0L;
 	
 	star_polar2cartesian(starvec, right_ascension, declination, 1.0L);
 	
@@ -127,19 +125,19 @@ int main (int argc, char** argv)
 	/////////////////////////////////////////////////////////////////
 
 	// computes rotate vector from right ascension axis to represent stars according to the ecliptic
-	star_new_north_coordinates_ra2rotate_vector(starcvec, 0.0L, (23.0L + 26.0L / 60.0L + (12.087L + 0.4863L * 3.0L)/ 3600.0L) * M_PI / 180.0L);
+	star_new_north_coordinates_rotate_vector(starcvec, 0.0L, (23.0L + 26.0L / 60.0L + 21.406L / 3600.0L) * M_PI / 180.0L, 1);
 
 	// performs transformations
 	star_rotate(starvec, starcvec);
 
 	// computes rotate vector from declination axis
-	star_new_north_coordinates_dec2rotate_vector(starcvec, right_ascension_axis, M_PI / 2.0L);
+	star_new_north_coordinates_rotate_vector(starcvec, M_PI / 2.0L, -right_ascension_axis, 0);
 	
 	// performs transformations
 	star_rotate(starvec, starcvec);
 	
 	// computes rotate vector from right ascension axis
-	star_new_north_coordinates_ra2rotate_vector(starcvec, M_PI, declination_axis);
+	star_new_north_coordinates_rotate_vector(starcvec, M_PI, declination_axis, 1);
 
 	// perform transformations
 	star_rotate(starvec, starcvec);
@@ -156,7 +154,12 @@ int main (int argc, char** argv)
 	float hours = right_ascension * 12.0L / M_PI;
 	float minutes = (hours - (float)((int)(hours))) * 60.0f;
 	float seconds = (minutes - (float)((int)(minutes))) * 60.0f;
-	printf("\t- Right Ascension: %dh%d'%d''\n\t- Declination: %.2Lf°\n", (int)(hours), (int)(minutes), (int)(seconds), declination * 180.0L / M_PI);
+	printf("\t- Right Ascension: %dh%d'%d''\n", (int)(hours), (int)(minutes), (int)(seconds));
+	hours = declination * 180.0L / M_PI;
+	minutes = (hours - (float)((int)(hours))) * 60.0f;
+	minutes = (minutes < 0)? -minutes: minutes;
+	seconds = (minutes - (float)((int)(minutes))) * 60.0f;
+	printf("\t- Declination: %d°%d'%d''\n", (int)(hours), (int)(minutes), (int)(seconds));
 	
 	return EXIT_SUCCESS;
 }
@@ -170,8 +173,7 @@ void print_help()
 	printf("The position of stars over time is the result of two cycles:\n");
 	printf("\t1) the precession of equinoxes ( ~ 25770 years period ).\n");
 	printf("\t2) the variations of obliquity ( ~ 41000 years period ).\n");
-	printf("The third cycle is the motion of perihelion due to ellipticity ( ~ 112000 years cycle ).\n");
-	printf("Those cycles produce the pole shift and changes in the equation of time.\n");
+	printf("Those cycles produce the pole shift.\n");
 	printf("OPTIONS:\n\n");
 	printf("-c : an integer that represents the calendar used:\n");
 	printf("\t1: julian calendar\n");
@@ -195,33 +197,26 @@ void print_help()
 	printf("\t./stars_shift -c1 -e \"1 1 5000\" -y RIGHT_ASCENSON -z DECLINATION\n");
 	printf("We can see that Véga is our polar star by the year 12755 ( with the proper motion )\n");
 	printf("\t./stars_shift -c1 -e \"1 1 12755\" -y 18.6156083333 -z 38.7829999999 -a 200.94 -d 286.23\n");
-	printf("For the day 1/1/12755\n");
+	printf("For the day 1/1/12739\n");
 	printf("		Tropic Year Value:\n");
 	printf("				365.241863 days\n");
 	printf("		Obliquity Value:\n");
-	printf("				22.044642°\n");
+	printf("				22.044766°\n");
 	printf("Results for the star:\n");
-	printf("		- Right Ascension: 5h59'53''\n");
-	printf("		- Declination: 83.24°\n");
+	printf("		- Right Ascension: 6h0'9''\n");
+	printf("		- Declination: 83°14'13''\n");
 	printf("\n###########################################################################################\n");
 }
 
-int star_new_north_coordinates_ra2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis)
+int star_new_north_coordinates_rotate_vector(double cvec[4], double axis, double radius, int a)
 {
-	star_polar2cartesian(cvec, right_ascension_axis, 0.0L, 1.0L);
-	cvec[0] = cosl( declination_axis / 2.0L);
+	if(a)
+		star_polar2cartesian(cvec, axis, 0.0L, 1.0L);
+	else
+		star_polar2cartesian(cvec, 0.0L, axis, 1.0L);
+	cvec[0] = cosl( radius / 2.0L);
 	for(int i = 1; i < 4; i++)
-		cvec[i] = sinl( declination_axis / 2.0L) * cvec[i];
-
-	return EXIT_SUCCESS;
-}
-
-int star_new_north_coordinates_dec2rotate_vector(double cvec[4], double right_ascension_axis, double declination_axis)
-{
-	star_polar2cartesian(cvec, 0.0L, declination_axis, 1.0L);
-	cvec[0] = cosl( - right_ascension_axis / 2.0L);
-	for(int i = 1; i < 4; i++)
-		cvec[i] = sinl( - right_ascension_axis / 2.0L) * cvec[i];
+		cvec[i] = sinl( radius / 2.0L) * cvec[i];
 
 	return EXIT_SUCCESS;
 }
